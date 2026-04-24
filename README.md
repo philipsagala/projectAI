@@ -1,127 +1,38 @@
-# Audio Analysis Agent (FFmpeg + LLM)
+# Audio Analysis Agent for AI Engineer Assessment
 
-## Overview
+A Python project for analyzing court deposition audio with FFmpeg/FFprobe and optionally generating human-readable insights with an LLM.
 
-This project is a simple audio analysis pipeline designed to process court deposition recordings and generate structured insights about audio quality.
+## What it does
 
-The system focuses on:
+- Extracts metadata with `ffprobe`
+- Detects silence segments with `ffmpeg` + `silencedetect`
+- Detects volume statistics with `volumedetect`
+- Extracts signal statistics with `astats`
+- Produces a structured JSON report
+- Adds a human-readable summary using either:
+  - OpenAI API, if `OPENAI_API_KEY` is configured
+  - A deterministic fallback summary if no API key is present
 
-* extracting audio metadata
-* detecting silence and volume issues
-* producing structured JSON output
-* handling batch processing reliably
+## Project structure
 
----
-
-## Features
-
-### Audio Analysis (FFmpeg)
-
-* Extract:
-
-  * duration
-  * bitrate
-  * sample rate
-  * channels
-
-* Detect:
-
-  * silence segments
-  * silence ratio
-  * low volume
-  * potential clipping
-
----
-
-### Structured Output
-
-Example:
-
-```json
-{
-  "analysis_version": "1.0",
-  "status": "success",
-  "file_name": "example.wav",
-  "metadata": {
-    "duration_seconds": 10.0,
-    "bitrate": 705662,
-    "sample_rate": 44100,
-    "channels": 1,
-    "codec_name": "pcm_s16le"
-  },
-  "audio_quality": {
-    "silence_ratio": 0.5,
-    "avg_volume_db": -24.1,
-    "max_volume_db": -18.1,
-    "low_volume_detected": false,
-    "potential_clipping": false
-  },
-  "issues": [
-    "Silence detected between 5.0s and 10.0s (5.0s)",
-    "Severe silence ratio detected: 50% of the audio is silent"
-  ],
-  "suggested_actions": [
-    "Audio may require significant editing due to high silence proportion"
-  ]
-}
+```text
+app/
+  analyzer.py
+  batch.py
+  ffmpeg_tools.py
+  llm.py
+  main.py
+  mcp_server.py
+  rules.py
+  schemas.py
 ```
 
----
+## Setup
 
-### Batch Processing
+### 1) Install FFmpeg
+Make sure `ffmpeg` and `ffprobe` are available in your PATH.
 
-Process multiple files in a directory:
-
-```bash
-python -m app.batch files --output batch_report.json
-```
-
-Example output:
-
-```json
-{
-  "analysis_version": "1.0",
-  "summary": {
-    "total_files": 3,
-    "successful_files": 3,
-    "failed_files": 0,
-    "files_with_issues": 1,
-    "avg_silence_ratio": 0.1667
-  },
-  "reports": [...]
-}
-```
-
----
-
-### Error Handling
-
-The system returns structured errors instead of crashing.
-
-Example:
-
-```json
-{
-  "analysis_version": "1.0",
-  "status": "failed",
-  "file_name": "corrupt.wav",
-  "error": "Invalid data found when processing input"
-}
-```
-
----
-
-## Installation
-
-### Install FFmpeg
-
-Mac (Homebrew):
-
-```bash
-brew install ffmpeg
-```
-
-Verify:
+Check:
 
 ```bash
 ffmpeg -version
