@@ -1,6 +1,6 @@
-# Audio Analysis Agent (Starter Project)
+# Audio Analysis Agent for AI Engineer Assessment
 
-A Python starter project for analyzing court deposition audio with FFmpeg/FFprobe and optionally generating human-readable insights with an LLM.
+A Python project for analyzing court deposition audio with FFmpeg/FFprobe and optionally generating human-readable insights with an LLM.
 
 ## What it does
 
