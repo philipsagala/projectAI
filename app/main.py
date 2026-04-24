@@ -8,20 +8,36 @@ from .analyzer import AudioAnalyzer
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyze an audio file and produce a JSON report.")
-    parser.add_argument("input", help="Path to audio file")
-    parser.add_argument("--output", help="Path to write JSON report", default=None)
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input")
+    parser.add_argument("--output", default="report.json")
     args = parser.parse_args()
 
     analyzer = AudioAnalyzer()
-    report = analyzer.analyze_file(args.input)
-    report_json = report.model_dump(mode="json")
 
-    if args.output:
-        Path(args.output).write_text(json.dumps(report_json, indent=2), encoding="utf-8")
-    else:
-        print(json.dumps(report_json, indent=2))
+    try:
+        report = analyzer.analyze_file(args.input)
 
+        if hasattr(report, "model_dump"):
+            report = report.model_dump()
+        elif hasattr(report, "dict"):
+            report = report.dict()
+
+    except Exception as exc:
+        report = {
+            "analysis_version": "1.0",
+            "file_name": args.input,
+            "status": "failed",
+            "error": str(exc),
+        }
+
+    with open(args.output, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2)
+
+    print(f"Report written to {args.output}")
 
 if __name__ == "__main__":
     main()

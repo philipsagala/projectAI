@@ -16,36 +16,55 @@ def aggregate_summary(reports: list[dict]) -> dict:
     if total_files == 0:
         return {
             "total_files": 0,
+            "successful_files": 0,
+            "failed_files": 0,
             "files_with_issues": 0,
             "avg_silence_ratio": 0.0,
             "potential_clipping_files": 0,
             "low_volume_files": 0,
         }
 
-    files_with_issues = sum(1 for r in reports if r.get("issues"))
-    avg_silence_ratio = sum(
-        r.get("audio_quality", {}).get("silence_ratio", 0.0)
-        for r in reports
-    ) / total_files
+    successful_reports = [
+        r for r in reports
+        if r.get("status") != "failed"
+    ]
+
+    successful_files = len(successful_reports)
+    failed_files = total_files - successful_files
+
+    files_with_issues = sum(
+        1 for r in successful_reports
+        if r.get("issues")
+    )
+
+    avg_silence_ratio = (
+        sum(
+            r.get("audio_quality", {}).get("silence_ratio", 0.0)
+            for r in successful_reports
+        ) / successful_files
+        if successful_files > 0
+        else 0.0
+    )
 
     potential_clipping_files = sum(
-        1 for r in reports
+        1 for r in successful_reports
         if r.get("audio_quality", {}).get("potential_clipping") is True
     )
 
     low_volume_files = sum(
-        1 for r in reports
+        1 for r in successful_reports
         if r.get("audio_quality", {}).get("low_volume_detected") is True
     )
 
     return {
         "total_files": total_files,
+        "successful_files": successful_files,
+        "failed_files": failed_files,
         "files_with_issues": files_with_issues,
         "avg_silence_ratio": round(avg_silence_ratio, 4),
         "potential_clipping_files": potential_clipping_files,
         "low_volume_files": low_volume_files,
     }
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -62,14 +81,23 @@ def main() -> None:
         if file_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             continue
 
-        report = analyzer.analyze_file(str(file_path))
+        try:
+            report = analyzer.analyze_file(str(file_path))
 
-        if hasattr(report, "model_dump"):
-            report = report.model_dump()
-        elif hasattr(report, "dict"):
-            report = report.dict()
+            if hasattr(report, "model_dump"):
+                report = report.model_dump()
+            elif hasattr(report, "dict"):
+                report = report.dict()
 
-        reports.append(report)
+            reports.append(report)
+
+        except Exception as exc:
+            reports.append({
+                "analysis_version": "1.0",
+                "file_name": file_path.name,
+                "status": "failed",
+                "error": str(exc),
+            })
 
     payload = {
         "analysis_version": "1.0",

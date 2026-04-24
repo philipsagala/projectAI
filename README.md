@@ -1,115 +1,209 @@
-# Audio Analysis Agent (Starter Project)
+# Audio Analysis Agent (FFmpeg + LLM)
 
-A Python starter project for analyzing court deposition audio with FFmpeg/FFprobe and optionally generating human-readable insights with an LLM.
+## Overview
 
-## What it does
+This project is a simple audio analysis pipeline designed to process court deposition recordings and generate structured insights about audio quality.
 
-- Extracts metadata with `ffprobe`
-- Detects silence segments with `ffmpeg` + `silencedetect`
-- Detects volume statistics with `volumedetect`
-- Extracts signal statistics with `astats`
-- Produces a structured JSON report
-- Adds a human-readable summary using either:
-  - OpenAI API, if `OPENAI_API_KEY` is configured
-  - A deterministic fallback summary if no API key is present
+The system focuses on:
 
-## Project structure
+* extracting audio metadata
+* detecting silence and volume issues
+* producing structured JSON output
+* handling batch processing reliably
 
-```text
-app/
-  analyzer.py
-  batch.py
-  ffmpeg_tools.py
-  llm.py
-  main.py
-  mcp_server.py
-  rules.py
-  schemas.py
+---
+
+## Features
+
+### Audio Analysis (FFmpeg)
+
+* Extract:
+
+  * duration
+  * bitrate
+  * sample rate
+  * channels
+
+* Detect:
+
+  * silence segments
+  * silence ratio
+  * low volume
+  * potential clipping
+
+---
+
+### Structured Output
+
+Example:
+
+```json
+{
+  "analysis_version": "1.0",
+  "status": "success",
+  "file_name": "example.wav",
+  "metadata": {
+    "duration_seconds": 10.0,
+    "bitrate": 705662,
+    "sample_rate": 44100,
+    "channels": 1,
+    "codec_name": "pcm_s16le"
+  },
+  "audio_quality": {
+    "silence_ratio": 0.5,
+    "avg_volume_db": -24.1,
+    "max_volume_db": -18.1,
+    "low_volume_detected": false,
+    "potential_clipping": false
+  },
+  "issues": [
+    "Silence detected between 5.0s and 10.0s (5.0s)",
+    "Severe silence ratio detected: 50% of the audio is silent"
+  ],
+  "suggested_actions": [
+    "Audio may require significant editing due to high silence proportion"
+  ]
+}
 ```
 
-## Setup
+---
 
-### 1) Install FFmpeg
-Make sure `ffmpeg` and `ffprobe` are available in your PATH.
+### Batch Processing
 
-Check:
+Process multiple files in a directory:
+
+```bash
+python -m app.batch files --output batch_report.json
+```
+
+Example output:
+
+```json
+{
+  "analysis_version": "1.0",
+  "summary": {
+    "total_files": 3,
+    "successful_files": 3,
+    "failed_files": 0,
+    "files_with_issues": 1,
+    "avg_silence_ratio": 0.1667
+  },
+  "reports": [...]
+}
+```
+
+---
+
+### Error Handling
+
+The system returns structured errors instead of crashing.
+
+Example:
+
+```json
+{
+  "analysis_version": "1.0",
+  "status": "failed",
+  "file_name": "corrupt.wav",
+  "error": "Invalid data found when processing input"
+}
+```
+
+---
+
+## Installation
+
+### Install FFmpeg
+
+Mac (Homebrew):
+
+```bash
+brew install ffmpeg
+```
+
+Verify:
 
 ```bash
 ffmpeg -version
 ffprobe -version
 ```
 
-### 2) Create virtual environment
+---
 
-```bash
-python -m venv .venv
-```
-
-Activate it:
-
-- Windows PowerShell
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-- macOS/Linux
-```bash
-source .venv/bin/activate
-```
-
-### 3) Install dependencies
+### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) Optional: configure LLM
+---
 
-Copy environment file:
+## Usage
 
-```bash
-cp .env.example .env
-```
-
-Then set:
-
-```env
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-4o-mini
-```
-
-If you skip this step, the project still runs and generates a rule-based summary.
-
-## Run single-file analysis
+### Single file
 
 ```bash
-python -m app.main examples/deposition_001.wav --output report.json
+python -m app.main files/sound01.wav --output report.json
 ```
 
-## Run batch analysis
+---
+
+### Batch
 
 ```bash
-python -m app.batch examples/ --output batch_report.json
+python -m app.batch files --output batch_report.json
 ```
 
-## Optional MCP server
+---
 
-Install FastMCP separately if you want the bonus:
+## Supported Formats
 
-```bash
-pip install fastmcp
-python -m app.mcp_server
+* wav
+* mp3
+* m4a
+* flac
+* aac
+* ogg
+
+---
+
+## Heuristics
+
+### Silence
+
+* segment threshold: ≥ 3 seconds
+* high silence ratio: ≥ 20%
+* severe silence ratio: ≥ 40%
+
+### Volume
+
+* low volume: avg < -35 dB
+
+### Clipping
+
+* based on peak levels near 0 dBFS
+
+---
+
+## Limitations
+
+* clipping detection is heuristic-based
+* noise floor is approximate
+* no transcription or speaker detection
+* not optimized for real-time processing
+
+---
+
+## Architecture
+
+```text
+Audio File
+   ↓
+FFmpeg / ffprobe
+   ↓
+Signal Analysis
+   ↓
+Rule-based processing
+   ↓
+Structured JSON output
 ```
-
-## Design notes
-
-- Detection is deterministic and FFmpeg-based.
-- The LLM is used only for explanation and action recommendations.
-- `potential_clipping` is heuristic-based, not a hard truth label.
-
-## Suggested next improvements
-
-- Add unit tests for regex parsers
-- Add aggregate summary across multiple files
-- Add per-channel analysis
-- Add transcript-aware analysis
-- Add Dockerfile
