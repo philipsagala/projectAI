@@ -1,0 +1,27 @@
+{
+  "file_name": "sound01.wav",
+  "metadata": {
+    "duration_seconds": 11.929093,
+    "bitrate": 1411322,
+    "sample_rate": 44100,
+    "channels": 2,
+    "codec_name": "pcm_s16le"
+  },
+  "audio_quality": {
+    "silence_ratio": 0.0,
+    "avg_volume_db": -22.2,
+    "max_volume_db": -9.1,
+    "peak_level_dbfs": -9.096288,
+    "rms_level_dbfs": -22.212579,
+    "noise_floor_dbfs": null,
+    "peak_count": 2,
+    "low_volume_detected": false,
+    "potential_clipping": false
+  },
+  "silence_segments": [],
+  "issues": [],
+  "summary": "Audio appears generally usable with no major quality issues detected. It should be suitable for review or transcription.",
+  "suggested_actions": [
+    "Audio appears generally usable for review and transcription"
+  ]
+}
