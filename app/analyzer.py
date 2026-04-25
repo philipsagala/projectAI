@@ -1,27 +1,34 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from .ffmpeg_tools import get_audio_metadata, detect_silence, detect_volume, detect_signal_stats
-from .llm import generate_summary
-from .rules import build_report_payload
-from .schemas import AudioReport
+from app.ffmpeg_tools import (
+    get_audio_metadata,
+    detect_silence,
+    detect_volume,
+    detect_signal_stats,
+)
+from app.rules import build_report_payload
+from app.llm import generate_llm_insight
 
 
 class AudioAnalyzer:
-    def analyze_file(self, audio_path: str | Path) -> AudioReport:
-        path = Path(audio_path)
+    def analyze_file(self, path: str) -> dict[str, Any]:
         metadata = get_audio_metadata(path)
         silence_segments = detect_silence(path)
         volume = detect_volume(path)
         stats = detect_signal_stats(path)
 
         payload = build_report_payload(
-            file_name=path.name,
+            file_name=Path(path).name,
             metadata=metadata,
             silence_segments=silence_segments,
             volume=volume,
             stats=stats,
         )
-        payload["summary"] = generate_summary(payload)
-        return AudioReport.model_validate(payload)
+
+        payload["status"] = "success"
+        payload["insight"] = generate_llm_insight(payload)
+
+        return payload
